@@ -1,0 +1,154 @@
+\documentclass[letterpaper, inpress]{jds} % use this for production
+% \documentclass[a4paper, review]{jds}      % use this for review
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% the following edits should be done by Journal typesetters
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setcounter{page}{1}            % set the first page number
+\jdsmonth{July}                 % month
+\jdsyear{2023}                  % year
+\jdsvolume{xx}                  % volume number
+\jdsissue{xx}                   % issue number
+\jdsdoi{xx.xxxx/xxxxxxxxx}      % doi
+\jdsreceived{July, 2023}       % optional: comment it out if no received date
+\jdsaccepted{August, 2023}         % optional: comment it out if no accepted date
+%% manually set running header for a shorter list of authors if needed
+% \shortauthors{A Author A, et al.}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% edits by authors are given below
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{amsfonts,amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+
+\usepackage{lipsum}
+
+\title{A Platform for Large Scale Statistical Modelling in \proglang{R}}
+
+\author[1]{Jason Cairns\thanks{corresponding email:\href{mailto:jason.cairns@auckland.ac.nz}{jason.cairns@auckland.ac.nz}}}
+\author[1]{Simon Urbanek}
+\author[1]{Paul Murrell}
+\affil[1]{Department of Statistics, University of Auckland, New Zealand}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+With the growing scale of big datasets, fitting novel statistical models on larger-than-memory datasets becomes correspondingly challenging.
+This presentation outlines the development and use of largescaler, a platform developed specifically for the development of statistical models for big datasets.
+\end{abstract}
+\begin{keywords} % alphabetical; excluding anything in the title already
+Big Data;
+Distributed Computing;
+Modelling;
+\end{keywords}
+
+\section{Introduction}%
+\label{sec:intro}
+
+The rate of growth of datasets continues to outpace attempts to engage meaningfully with them, as individual computer memory limits are increasingly exceeded \citep{kleppmann2017dataintensive}.
+At the scale of big data, speed also becomes a constraining factor, with concurrency and parallelism being of increasing importance.
+The aim of a statistician seeking to gain novel insight from such datasets commonly includes the interactive use of a complex statistical model, often implemented from scratch using \proglang{R}.
+No single system satisfactorily provides the capacity to meet this demand.
+
+Those systems that do come close to meeting the demand provide direction regarding how to gain insight from larger-than-memory datasets.
+Most importantly, the standard solution for handling big data is to operate over a distributed system~\citep{boja2012distributed}.
+Several systems have seen widespread use within the context of data and machine learning pipelines, such as \proglang{Spark}~\citep{zaharia2016apache} and \proglang{Hadoop Map-Reduce}~\citep{shvachko2010hadoop}.
+For the statistician mostly familiar with \proglang{R}, these systems provide API's to \proglang{R} where distributed data may be manipulated and pre-made models fitted.
+However, these API's are often found lacking when attempted to be used for the creation of complex statistical models that don't come pre-packaged, due to this not being their primary use-case, and \proglang{R} not being their target language.
+
+Within the motivating context provided, the \pkg{largescaler} project has sought to provide a full stack for working with larger-than-memory data in \proglang{R}, allowing the developer to manipulate distributed data and create arbitrary complex, iterative models with which to fit to the data, over a self-contained user-specified computing cluster.
+
+\section{Methods}
+
+The structure of the \pkg{largescaler} system has been defined principally by the response to linguistic challenges facing an API for modelling on big data.
+
+The challenge of the object system provokes questions of what objects should comprise such a system, and what properties they should possess.
+\pkg{largescaler} has answered this in a standard fashion, providing chunks, references to the chunks, and an abstraction over them for the end-user. Users interact indirectly with chunks, by way of chunk references, which are typically collected as arrays and made opaque to the high-level user, as shown in Figure~\ref{fig:distobj}. Arbitrary underlying data, a layered class hierarchy for data access, and asynchronous and immediate distributed procedure dispatch are further core design decisions.
+
+\begin{figure}[ht]
+\begin{center}
+\centerline{\includegraphics[width=0.5\textwidth]{distobjref}}
+\caption{Distributed object, showing chunks and their references across disparate nodes.}
+\label{fig:distobj}
+\end{center}
+\end{figure}
+
+Communication structure is a further challenge, which has as its answer an implicit virtual topology of the distributed system.
+\pkg{largescaler} engages distributed worker nodes in a peer-to-peer fashion, chunks being the core means of addressing, with their location made opaque at the user-level of the system.
+
+Concurrency is an essential component to distributed systems, and this challenge saw its response as both in-process and inter-process concurrency with \pkg{largescaler}; the base supporting layer of the \pkg{largescaler} stack is a bespoke in-memory TCP message queue service that allows for communication between nodes concurrent with their other operations.
+Between nodes, routines run asynchronously over chunks, with parallelism implicit and controlled in distributed fashion.
+
+Evaluation and scope serve to speciate languages, as \proglang{R} from \pkg{S}, and they take special forms in a distributed system.
+\pkg{largescaler} seeks to minimise any differences from the \proglang{R} language, so as to provide as transparent an experience for developers as possible, but with respect to evaluation, differs in following a call-by-value, as opposed to call-by-need pattern. Furthermore, errors can be caught, but are only propogated to the caller upon emergence of the underlying chunks, with the system favouring asynchrony to strictness. Scope is likewise limited in favour of message transfer efficiency.
+
+In order to enable complex and iterative models, a distributed garbage collection system is also essential.
+Such a system should handle mutable underlying chunk data as well.
+Mutable data is treated equivalently to immutable data, where all operations on chunks result in new references, with new identifiers, that are surjective to their referent chunks.
+\pkg{largescaler} enables garbage collection in an efficient and conservative manner, through automatically keeping track of the directed acyclic graph of chunk generation history alongside each chunk reference, and clearing this upon proof of computation.
+Chunks lacking references are marked for deletion and may then be removed by \proglang{R}'s internal garbage collection.
+
+\section{Results}
+
+\pkg{largescaler} serves as a functioning system, capable of performing complex statistical analyses over datasets spanning hundreds of nodes.
+The implementation of this system makes use of a layered approach, wherein each layer targets a different category of user.
+A description of the implementation structure of \pkg{largescaler} follows.
+
+The system is supported at the base layer by the \pkg{orcv} package, which exists as an in-memory threaded TCP message queue.
+It was created specifically for \pkg{largescaler}, making use of the \pkg{C} API for \proglang{R}, though it is sufficiently general to serve the wider purpose of a message queue for the transfer of \proglang{R} objects between \proglang{R} processes.
+Central to the functionality of \pkg{orcv} is its multithreaded operation, allowing transfers to take place in the background of the host \proglang{R} process, thereby not blocking computation.
+The core userbase of this package is intended as developers on \pkg{largescaler}.
+
+Sitting on top of \pkg{orcv}, the package \pkg{chunknet} enables the creation of detached nodes, which use \pkg{orcv} to communicate, and operate using their own event loops populated via the queue provided by \pkg{orcv}.
+The instances of these nodes provided by the package are worker nodes, and a location service, which serve to operate on and locate chunks, respectively.
+The client interface is also provided by \pkg{chunknet}, allowing interaction with chunks as the major user-facing class in this package.
+Chunks can be interacted with individually, or collected as part of arbitrary-dimension arrays, over which distributed \pkg{apply()}'s and the like are defined.
+The main users of this package are intended to be power-users of distributed statistical algorithms who seek to maximise performance.
+
+The package that meets the demanding statistician referenced in Section~\ref{sec:intro} is given by the \pkg{largescaler} package, which offers the distributed object as an abstracted class where chunk distribution is handled implicitly by the package, freeing the statistician to focus on model creation. Further features offered by the package include distributed environment setup, an automatic distributed function converter, distributed functional programming tools such as a reduce operator, distributed i/o, checkpointing, shuffling of datasets with implicit load-balancing, and a \pkg{dplyr} interface to distributed objects.
+
+\section{User Interface}
+
+The \pkg{largescaler} interface is the principal new contribution by this project, delivering a novel means of interacting with distributed data through meaningful primitives defined at every level of abstraction.
+A key offering of the layered approach is the ease by which a user of the package can traverse the levels as needed, with irrelevent information remaining hidden until required.
+The levels of abstraction correspond to users of the package, given as the following:
+
+\begin{description}
+    \item[Analyst] A user solely interested in using the provided models and statistical functions in order to attain insight into some larger-than-memory data, typically a distributed data frame. All details of distribution are abstracted away.
+    \item[Researcher] A user seeking to develop their own distributed statistical models. Distributed objects are to be considered as singular cohesive objects.
+    \item[Developer] A user seeking greater expressivity in the definition of statistical models. Chunks are considered a relevant concern to be manipulated directly.
+    \item[Architect] A user intending to directly modify the network topology of the distributed system, mainly in order to attain major efficiency gains.
+\end{description}
+
+Each of the users are served by the aforementioned packages making up the framework.
+The main public interface to each package is described in greater detail in the following subsections. 
+
+\subsection{\pkg{largescalemodelr}}
+\subsection{\pkg{largescaler}}
+\subsection{\pkg{chunknet}}
+\subsection{\pkg{orcv}}
+
+\section{Discussion/Conclusions}
+
+The \pkg{largescaler} system has been proven over a number of application areas.
+Data manipulation is a basic necessity, as it is required for modelling, and is provided well by other systems.
+\pkg{largescaler} is capable of a full set of data manipulations, including all that are provided by the \pkg{dplyr} package.
+Model fitting is demonstrated in the proof-of-concept \pkg{largescalemodelr} package, which includes a variety of models, including linear models and generalised linear models.
+Work is currently underway to develop examples of boosted models, as well as a convex optimisation methods such as the alternating direction method of multipliers.
+
+Initial benchmarking results are highly promising, with performance results measuring not only speed but capability;
+One instance of capability is given in the creation of a contingency table of a large dataset that crashed \proglang{Spark} but was computed in several seconds using \pkg{largescaler}.
+
+The scope for future work remains significant, enabled by the high level of extensibility provided by the system.
+External systems which serve to monitor performance or take up the role of garbage collection would grant the possibility of greater reliabilit.
+Robustness could be gained through self-healing datasets, a potential that has a precedent in a current prototype, which allows for resiliance to node failure in a more efficient manner than that of the current Resilient Distributed Datasets~\citep{zaharia2012resilient}.
+Further resiliance can be gained within the system through operating the location service as a distributed hash table, leaving no central point of failure in a fully peer-to-peer system.
+
+\bibliographystyle{jds}
+\bibliography{largescaler-jason-cairns}
+
+\end{document}
