@@ -1,0 +1,37 @@
+
+\begin{tikzpicture}[>=latex,line join=bevel,]
+%%
+\begin{scope}
+  \pgfsetstrokecolor{black}
+  \definecolor{strokecol}{rgb}{1.0,1.0,1.0};
+  \pgfsetstrokecolor{strokecol}
+  \definecolor{fillcol}{rgb}{1.0,1.0,1.0};
+  \pgfsetfillcolor{fillcol}
+  \filldraw (0.0bp,0.0bp) -- (0.0bp,244.0bp) -- (219.0bp,244.0bp) -- (219.0bp,0.0bp) -- cycle;
+\end{scope}
+\begin{scope}
+  \pgfsetstrokecolor{black}
+  \definecolor{strokecol}{rgb}{1.0,1.0,1.0};
+  \pgfsetstrokecolor{strokecol}
+  \definecolor{fillcol}{rgb}{1.0,1.0,1.0};
+  \pgfsetfillcolor{fillcol}
+  \filldraw (0.0bp,0.0bp) -- (0.0bp,244.0bp) -- (219.0bp,244.0bp) -- (219.0bp,0.0bp) -- cycle;
+\end{scope}
+  \node (q1) at (30.5bp,176.0bp) [draw,ellipse] {Queue 1};
+  \node (q2) at (109.5bp,176.0bp) [draw,ellipse] {Queue 2};
+  \node (q3) at (188.5bp,176.0bp) [draw,ellipse] {Queue 3};
+  \node (m) at (109.5bp,233.5bp) [draw,ellipse] {master process};
+  \node (p1) at (38.5bp,119.5bp) [draw,ellipse] {Process 1};
+  \node (p2) at (109.5bp,64.5bp) [draw,ellipse] {Process 2};
+  \node (p3) at (140.5bp,9.5bp) [draw,ellipse] {Process 3};
+  \draw [->] (m) ..controls (84.261bp,214.77bp) and (65.841bp,201.83bp)  .. (q1);
+  \draw [->] (m) ..controls (109.5bp,215.84bp) and (109.5bp,206.15bp)  .. (q2);
+  \draw [->] (m) ..controls (134.74bp,214.77bp) and (153.16bp,201.83bp)  .. (q3);
+  \draw [->] (q1) ..controls (33.033bp,157.74bp) and (34.506bp,147.71bp)  .. (p1);
+  \draw [->] (q2) ..controls (109.5bp,146.51bp) and (109.5bp,107.36bp)  .. (p2);
+  \draw [->] (q3) ..controls (177.57bp,137.55bp) and (156.0bp,63.62bp)  .. (p3);
+  \draw [->] (p1) ..controls (60.126bp,102.36bp) and (77.076bp,89.704bp)  .. (p2);
+  \draw [->] (p2) ..controls (118.86bp,47.493bp) and (125.03bp,36.954bp)  .. (p3);
+%
+\end{tikzpicture}
+

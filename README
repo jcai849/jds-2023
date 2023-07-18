@@ -1,0 +1,3 @@
+depends: texlive,bmake,graphviz,dot2tex
+
+> bmake

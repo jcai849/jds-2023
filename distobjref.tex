@@ -1,0 +1,46 @@
+
+\begin{tikzpicture}[>=latex,line join=bevel,]
+%%
+\begin{scope}
+  \pgfsetstrokecolor{black}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (0.0bp,28.0bp) -- (0.0bp,213.0bp) -- (170.0bp,213.0bp) -- (170.0bp,28.0bp) -- cycle;
+  \draw (85.0bp,195.5bp) node {Distributed Object Reference};
+\end{scope}
+\begin{scope}
+  \pgfsetstrokecolor{black}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (190.0bp,202.0bp) -- (190.0bp,272.0bp) -- (272.0bp,272.0bp) -- (272.0bp,202.0bp) -- cycle;
+  \draw (231.0bp,255.0bp) node {process 1};
+\end{scope}
+\begin{scope}
+  \pgfsetstrokecolor{black}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (190.0bp,124.0bp) -- (190.0bp,194.0bp) -- (272.0bp,194.0bp) -- (272.0bp,124.0bp) -- cycle;
+  \draw (231.0bp,177.0bp) node {process 2};
+\end{scope}
+\begin{scope}
+  \pgfsetstrokecolor{black}
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (190.0bp,8.0bp) -- (190.0bp,116.0bp) -- (272.0bp,116.0bp) -- (272.0bp,8.0bp) -- cycle;
+  \draw (231.0bp,99.0bp) node {process 3};
+\end{scope}
+  \node (cr1) at (85.0bp,160.0bp) [draw,fill=white,ellipse] {Chunk Reference 1};
+  \node (cr2) at (85.0bp,122.0bp) [draw,fill=white,ellipse] {Chunk Reference 2};
+  \node (cr3) at (85.0bp,84.0bp) [draw,fill=white,ellipse] {Chunk Reference 3};
+  \node (cr4) at (85.0bp,46.0bp) [draw,fill=white,ellipse] {Chunk Reference 4};
+  \node (c1) at (231.0bp,220.0bp) [draw,fill=white,ellipse] {chunk 1};
+  \node (c2) at (231.0bp,142.0bp) [draw,fill=white,ellipse] {chunk 2};
+  \node (c3) at (231.0bp,64.0bp) [draw,fill=white,ellipse] {chunk 3};
+  \node (c4) at (231.0bp,26.0bp) [draw,fill=white,ellipse] {chunk 4};
+  \draw [->] (cr1) ..controls (133.86bp,179.94bp) and (175.11bp,197.13bp)  .. (c1);
+  \draw [->] (cr2) ..controls (152.85bp,131.29bp) and (175.38bp,134.41bp)  .. (c2);
+  \draw [->] (cr3) ..controls (152.85bp,74.715bp) and (175.38bp,71.586bp)  .. (c3);
+  \draw [->] (cr4) ..controls (152.85bp,36.715bp) and (175.38bp,33.586bp)  .. (c4);
+%
+\end{tikzpicture}
+

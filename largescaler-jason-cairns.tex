@@ -1,4 +1,5 @@
 \documentclass[letterpaper, inpress]{jds} % use this for production
+
 % \documentclass[a4paper, review]{jds}      % use this for review
 
 
@@ -20,10 +21,15 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% edits by authors are given below
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{listings}
+\lstset{language=C} 
+\usepackage[x11names, svgnames, rgb]{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage{tikz}
+\usetikzlibrary{snakes,arrows,shapes}
 \usepackage{amsfonts,amsmath,amssymb,amsthm}
 \usepackage{booktabs}
-
-\usepackage{lipsum}
+\usepackage{todonotes}
 
 \title{A Platform for Large Scale Statistical Modelling in \proglang{R}}
 
@@ -38,7 +44,7 @@
 
 \begin{abstract}
 With the growing scale of big datasets, fitting novel statistical models on larger-than-memory datasets becomes correspondingly challenging.
-This presentation outlines the development and use of largescaler, a platform developed specifically for the development of statistical models for big datasets.
+This document outlines the development and use of largescaler, a platform developed specifically for the development of statistical models for big datasets.
 \end{abstract}
 \begin{keywords} % alphabetical; excluding anything in the title already
 Big Data;
@@ -71,7 +77,7 @@ The challenge of the object system provokes questions of what objects should com
 
 \begin{figure}[ht]
 \begin{center}
-\centerline{\includegraphics[width=0.5\textwidth]{distobjref}}
+    \input{distobjref.tex}
 \caption{Distributed object, showing chunks and their references across disparate nodes.}
 \label{fig:distobj}
 \end{center}
@@ -128,9 +134,62 @@ Each of the users are served by the aforementioned packages making up the framew
 The main public interface to each package is described in greater detail in the following subsections. 
 
 \subsection{\pkg{largescalemodelr}}
+
+The interface for the analyst, the \pkg{largescalemodelr} public interface consists solely of statistical models.
+Beyond the analyst, the source code for the models serve as examples of system usage, and are deliberately styled in such a fashion as to demonstrate the different techniques made possible by the lower layers of the \pkg{largescaler} framework.
+
+Three models are exposed:
+\begin{description}
+    \item[\texttt{dlm}] Distributed Linear Model
+    \item[\texttt{dglm}] Distributed Generalised Linear Model
+    \item[\texttt{dlasso}] Distributed LASSO
+\end{description}
+
+Each accept distributed objects as arguments for the data sets, with formula interfaces provided for the linear models.
+
+\todo{more in this section?}
+
 \subsection{\pkg{largescaler}}
+
+The framework namesake, \pkg{largescaler} serves to provide a toolbox for the definition of distributed statistical models.
+\pkg{largescaler} exposes a range of conceptually related entities
+
+\todo{Distributed Object and methods - [, table, etc.}
+\todo{Distributed Object Reference}
+\todo{ dplyr}
+\todo{ IO}
+\todo{ HOF (do.dcall, dreduce \ref{fig:dreduce}, difference w/map-reduce, map-reduce)}
+\todo{ checkpoint}
+\todo{ combine}
+\todo{ cluster initialisation}
+
+\begin{figure}[ht]
+\begin{center}
+    \input{dreduce.tex}
+\caption{Example distributed reduce pattern from controlling process.}
+\label{fig:dreduce}
+\end{center}
+\end{figure}
+
 \subsection{\pkg{chunknet}}
+
 \subsection{\pkg{orcv}}
+
+\pkg{orcv} is the infrastructure layer that handles the network communications and base node data structures, as an asynchronous communicating event receiver.
+This lowest layer is a self-contained package of mostly \proglang{C} descriptions of networking communication and thread-safe internal event queues.
+Communications are the core of this package and the main entities given are the listener and receivers.
+The listener is simply a standard \lstinline{accept()}er that upon acceptance of a connection passes on the file descriptor to a thread pool of receivers by way of the thread-safe queue.
+The receiver that picks up the connection in turn reads from it, passing on whatever message is received to a shared event queue, along with a file descriptor of the connection socket, in order to allow for direct responses to messages.
+
+The two core classes exposed by \pkg{orcv} are the \textsc{Message} and the \textsc{Location} classes, which both seek to abstract some of the more fundamental networking details away.
+The \textsc{Message} class captures the notion of the payload, which is sent to some other node given by a \textsc{Location}, using the \lstinline{send()} method.
+The payload can be any standard \proglang{R} object.
+This is accepted in a separate thread at the receiver location, provided that that the receiver server has been \lstinline{start()}ed, and it is placed on a receiver event queue.
+The event queue consists of a basic thread-safe queue, with efficiency gains from \lstinline{poll()}.
+The event queue can be popped using a \lstinline{receive()}, and in this fashion communication can take place.
+
+So orcv provides initial network communication capabilities, as well as event queues that can be monitored, with events themselves able to be replied to directly by way of their included file descriptor.
+Much of the package structure is related to existing work by \citet{osrv}, with much of the networking architecture taking direct inspiration from \citet{stevens1997network}
 
 \section{Discussion/Conclusions}
 
