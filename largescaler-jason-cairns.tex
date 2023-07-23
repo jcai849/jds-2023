@@ -22,14 +22,13 @@
 %% edits by authors are given below
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{listings}
-\lstset{language=C} 
+\lstset{language=R,frame=tlb,float} 
 \usepackage[x11names, svgnames, rgb]{xcolor}
 \usepackage[utf8]{inputenc}
 \usepackage{tikz}
 \usetikzlibrary{snakes,arrows,shapes}
 \usepackage{amsfonts,amsmath,amssymb,amsthm}
 \usepackage{booktabs}
-\usepackage{todonotes}
 
 \title{A Platform for Large Scale Statistical Modelling in \proglang{R}}
 
@@ -44,7 +43,7 @@
 
 \begin{abstract}
 With the growing scale of big datasets, fitting novel statistical models on larger-than-memory datasets becomes correspondingly challenging.
-This document outlines the development and use of largescaler, a platform developed specifically for the development of statistical models for big datasets.
+This document outlines the development and use of \pkg{largescaler}, a platform developed specifically for the development of statistical models for big datasets.
 \end{abstract}
 \begin{keywords} % alphabetical; excluding anything in the title already
 Big Data;
@@ -55,25 +54,53 @@ Modelling;
 \section{Introduction}%
 \label{sec:intro}
 
-The rate of growth of datasets continues to outpace attempts to engage meaningfully with them, as individual computer memory limits are increasingly exceeded \citep{kleppmann2017dataintensive}.
+The rate of growth of datasets continues to outpace attempts to engage meaningfully with them, as individual computer memory limits are increasingly exceeded~\citep{kleppmann2017dataintensive}.
 At the scale of big data, speed also becomes a constraining factor, with concurrency and parallelism being of increasing importance.
 The aim of a statistician seeking to gain novel insight from such datasets commonly includes the interactive use of a complex statistical model, often implemented from scratch using \proglang{R}.
 No single system satisfactorily provides the capacity to meet this demand.
 
 Those systems that do come close to meeting the demand provide direction regarding how to gain insight from larger-than-memory datasets.
 Most importantly, the standard solution for handling big data is to operate over a distributed system~\citep{boja2012distributed}.
-Several systems have seen widespread use within the context of data and machine learning pipelines, such as \proglang{Spark}~\citep{zaharia2016apache} and \proglang{Hadoop Map-Reduce}~\citep{shvachko2010hadoop}.
+Several systems have seen widespread use within the context of data and machine learning pipelines, such as \pkg{Spark}~\citep{zaharia2016apache} and \pkg{Hadoop Map-Reduce}~\citep{shvachko2010hadoop}.
 For the statistician mostly familiar with \proglang{R}, these systems provide API's to \proglang{R} where distributed data may be manipulated and pre-made models fitted.
 However, these API's are often found lacking when attempted to be used for the creation of complex statistical models that don't come pre-packaged, due to this not being their primary use-case, and \proglang{R} not being their target language.
 
-Within the motivating context provided, the \pkg{largescaler} project has sought to provide a full stack for working with larger-than-memory data in \proglang{R}, allowing the developer to manipulate distributed data and create arbitrary complex, iterative models with which to fit to the data, over a self-contained user-specified computing cluster.
+For instance, \pkg{sparklyr} is an interface to Spark from within R~\citep{luraschi20}.
+The user connects to spark and accumulates instructions for the manipulation of a \pkg{Spark} DataFrame object using \pkg{dplyr} commands, then executing the request on the \pkg{Spark} cluster.
+It works fluidly when intentions meet the \pkg{Spark} paradigm, but due to it being only an interface to an external system, it is commonly required to program directly to \pkg{Spark} specifications, using \proglang{Scala}, when more complex and custom analyses are required.
 
-\section{Methods}
+The most notable general interface in \proglang{R} that has capabilities for large data is the the \pkg{foreach} package~\citep{microsoft20}.
+The backends are provided by other packages, typically named with some form of ``Do\emph{X}'', and can be drivers to external or \proglang{R}-specific systems.
+Parallelisation is enabled by some backends, with \pkg{doParallel} allowing parallel computations~\citep{corporation19}, \pkg{doSNOW} enabling cluster access through the \pkg{SNOW} package~\citep{dosnow19}, and \pkg{doMPI} allowing for direct MPI access~\citep{weston17}.
+\pkg{foreach} remains an exceptional and general interface, but can only be as performant as the backend driver packages.
+The necessity of persisting large data objects and allowing for complex manipulation of them is not met by any of the reviewed package backends.
 
-The structure of the \pkg{largescaler} system has been defined principally by the response to linguistic challenges facing an API for modelling on big data.
+The most complete self-contained interface that was developed specifically for statistical modelling in \proglang{R} is given by the \pkg{pbdR} collection.
+This collection allows for for distributed computing with \proglang{R}~\citep{pbdBASEpackage}, with the name being the abbreviation of Programming with Big Data in R.
+The packages include high-performance communication and computation capabilities, including \pkg{RPC}, \pkg{ZeroMQ}, and \pkg{MPI} interfaces.
+The collection is extensive, offering several packages for each of the main categories of application functionality, communication, computation, development, I/O, and profiling.
+While incredibly performant and great care has been taken to provide an interface as close to native \proglang{R} as possible, the provided packages still require an MPI form of shared program amongst all cluster nodes, which presents an unfamiliar form of program specification to most \proglang{R} users.
+In addition, more complex analyses requiring lower-level data manipulation end up increasingly involved with the complexities of MPI, which was authored as a far more general system than its use-case in \pkg{pbdR}, thereby possessing a far greater complexity than necessitated.
+Regardless, the direction provided of distributing large data across compute nodes, as a means of statistical interaction, is a concept that has been proven well by this package collection.
 
-The challenge of the object system provokes questions of what objects should comprise such a system, and what properties they should possess.
-\pkg{largescaler} has answered this in a standard fashion, providing chunks, references to the chunks, and an abstraction over them for the end-user. Users interact indirectly with chunks, by way of chunk references, which are typically collected as arrays and made opaque to the high-level user, as shown in Figure~\ref{fig:distobj}. Arbitrary underlying data, a layered class hierarchy for data access, and asynchronous and immediate distributed procedure dispatch are further core design decisions.
+Within the motivating context provided, the \pkg{largescaler} project has sought to provide a full stack for working with larger-than-memory data in \proglang{R}, allowing the developer to manipulate distributed data and create arbitrarily complex iterative models with which to fit to the data, over a self-contained user-specified computing cluster. Further details on \pkg{largescaler} are provided in~\citet{cairns2023}.
+
+\section{Construction of a Large-Data Statistical System API for R}
+
+The construction of such \pkg{largescaler} has roots in a theoretical reconsideration of precisely what determines the necessary components of a system capable of complex statistical modelling with larger-than-memory data in a distributed fashion.
+The structure of such considerations have been defined principally by the response to linguistic challenges facing such an API.
+
+In order to perform calculations on larger-than-memory data, we need some means of \textbf{representing} the data, in order for it to be tangible and useful.
+All objects, regular or irregular, are facilitated in their access and manipulation by way of an \textbf{object system}, which is an organised manner of interaction with objects.
+We choose the description of an object system as the basis for the theoretical development of our project as it is that aspect which is most proximal to the constraint imposed by the scale of data dealt with, in being that aspect which defines how data is dealt with.
+The central constraint is that the data is larger than computer memory.
+This, coupled with the fact that they must be worked on in-memory, leads to an impossible design if combined naively.
+The only possible means is to split the data into smaller pieces that do fit in memory.
+Such a structure, common among big data systems, is known as a shard, or a \textbf{chunk}. 
+The chunk thus serves as the lowest level object manipulable by the user, and defines the lower level of the layered object system.
+The end-user is typically not interested in the chunks making the object.
+Therefore higher-level objects are introduced as compositions of chunks, serving as abstract collections where individual chunks are a layer of concern below the user interface.
+Such higher-level objects are termed \textbf{distributed objects}, and serve as the primary data structure interacted with by the high-level user, with a representative example depicted in Figure~\ref{fig:distobj}.
 
 \begin{figure}[ht]
 \begin{center}
@@ -83,42 +110,51 @@ The challenge of the object system provokes questions of what objects should com
 \end{center}
 \end{figure}
 
-Communication structure is a further challenge, which has as its answer an implicit virtual topology of the distributed system.
-\pkg{largescaler} engages distributed worker nodes in a peer-to-peer fashion, chunks being the core means of addressing, with their location made opaque at the user-level of the system.
+With the establishment of an object system, attention may then be turned to the actualities of \textbf{computation}. 
+For each chunk, each operation must possess the following properties:
 
-Concurrency is an essential component to distributed systems, and this challenge saw its response as both in-process and inter-process concurrency with \pkg{largescaler}; the base supporting layer of the \pkg{largescaler} stack is a bespoke in-memory TCP message queue service that allows for communication between nodes concurrent with their other operations.
-Between nodes, routines run asynchronously over chunks, with parallelism implicit and controlled in distributed fashion.
+\begin{itemize}
+    \item Operations on chunks must have some means of access to all of the relevant chunk arguments to operate on together;
+    \item The operation must have a stored description of some kind;
+    \item The result of the operation must be stored somewhere.
+\end{itemize}
 
-Evaluation and scope serve to speciate languages, as \proglang{R} from \pkg{S}, and they take special forms in a distributed system.
-\pkg{largescaler} seeks to minimise any differences from the \proglang{R} language, so as to provide as transparent an experience for developers as possible, but with respect to evaluation, differs in following a call-by-value, as opposed to call-by-need pattern. Furthermore, errors can be caught, but are only propogated to the caller upon emergence of the underlying chunks, with the system favouring asynchrony to strictness. Scope is likewise limited in favour of message transfer efficiency.
+A \textbf{chunk function applicator} is required that takes a function and some chunks, sending the operation to a node which apply the function to the specified chunks.
+The applicator requires some means of access to the respective chunks.
+An equivalent \textbf{distributed object function applicator} is to be defined in a similar manner, though for distributed objects.
+Likewise, following the conclusion of the operation, some means of access to the result is required - the result is to be kept as a distributed object itself, allowing for further iterative action on it.
 
-In order to enable complex and iterative models, a distributed garbage collection system is also essential.
-Such a system should handle mutable underlying chunk data as well.
-Mutable data is treated equivalently to immutable data, where all operations on chunks result in new references, with new identifiers, that are surjective to their referent chunks.
-\pkg{largescaler} enables garbage collection in an efficient and conservative manner, through automatically keeping track of the directed acyclic graph of chunk generation history alongside each chunk reference, and clearing this upon proof of computation.
-Chunks lacking references are marked for deletion and may then be removed by \proglang{R}'s internal garbage collection.
+Some of the concerns relevent to the applicators include questions of argument sourcing and interaction.
+With regards to sourcing, the optimal node should be chosen to perform the operation in order to minimise data movement.
+All chunks not immediately available to the operating node are needed to be made so in order for the operation to take place.
+Interaction between chunks, especially in the context of the distributed object function applicator, seeks to answer the question of how these distributed arguments are to be treated in multiple.
+For instance, whether to recycle chunks, and how they are to be appropriately combined.
 
-\section{Results}
+After laying out the distributed objects and the operations that they may be engaged in, we reach the limits of the construction of the system.
+The mechanical aspects of the system developed, focus is turned to the more complex and precise notions of the arrangement of these components;
+let us expand the construction limits now by exploring and describing the component of time as it relates to the system - specifically, \textbf{concurrency} within the system.
+Here, we treat concurrency in the manner of \citet{pike2012concurrency}, where it is used to refer to the composition of independently executing processes.
+Considering the system as a whole, and determining the independently executing processes within it and how they may be composed, it is clear that a distributed system has significant room for concurrency, which serves to aid speed and memory usage.
+Assuming distinct nodes for performing operations on chunks, a remarkable thing would occur on the requesting client: nothing happens.
+The processing occurs in an entirely separate memory space, with a different processor.
+Were the client performing operations on regular, non-chunk objects, the processing would bind up the client, and it would block until the operation completed.
+This recognition opens up a broad mix of possibilities and complications.
+In terms of possibilities, the potential for chunk operations to be non-blocking to the client means that operations may be \textbf{asynchronous}, which would allow for significantly more efficient ordering of events within the system.
+Long operations on chunks may take place side-by-side with client-side operations on local objects, neither interfering with each other. The converse of such a possibility is the new potential for \textbf{race conditions}, where the unordered timing of events may lead to undesirable behaviour. 
+
+Through the defining feature of distributed data being incapable of direct reference, we have established that there must be some entity through which to indirectly interact with the distributed data.
+This entity we have given the appellation of \textbf{`Distributed Object Reference'}, and serves as a proxy which is directly affected by the user in order to pass on further information to and from the distributed data which the reference refers to.
+This relationship between the reference and the distributed data is known as \textbf{``adequacy''} in formal semantics, with the role of the distributed data as the object of indirect interaction being called the \textbf{``referent''} \citep{gordon1984}.
+It must be established that the reference itself may be of conceptual interest.
+The referents themselves, if completely transparent to a reference, possess no information on their relation to each other.
+This information needs to be captured somewhere accessible to the user, with most distributed algorithms being dependent on the knowledge of how the underlying chunks relate, in dimension or quantity. 
+Generalising the terminology of \citet{quine1979}, the distinction between the \textbf{use} and \textbf{mention} with respect to  distributed objects lies in the contrasting operations that may be intended of a distributed object reference: interaction may be intended for either the referent distributed object (use), or the reference itself (mention).
+Such semantics of access to the reference and referent serve as the basis for much of metaprogramming, and may be considered a valuable component of a distributed statistical system.
+
+\section{User Interface}\label{sec:ui}
 
 \pkg{largescaler} serves as a functioning system, capable of performing complex statistical analyses over datasets spanning hundreds of nodes.
 The implementation of this system makes use of a layered approach, wherein each layer targets a different category of user.
-A description of the implementation structure of \pkg{largescaler} follows.
-
-The system is supported at the base layer by the \pkg{orcv} package, which exists as an in-memory threaded TCP message queue.
-It was created specifically for \pkg{largescaler}, making use of the \pkg{C} API for \proglang{R}, though it is sufficiently general to serve the wider purpose of a message queue for the transfer of \proglang{R} objects between \proglang{R} processes.
-Central to the functionality of \pkg{orcv} is its multithreaded operation, allowing transfers to take place in the background of the host \proglang{R} process, thereby not blocking computation.
-The core userbase of this package is intended as developers on \pkg{largescaler}.
-
-Sitting on top of \pkg{orcv}, the package \pkg{chunknet} enables the creation of detached nodes, which use \pkg{orcv} to communicate, and operate using their own event loops populated via the queue provided by \pkg{orcv}.
-The instances of these nodes provided by the package are worker nodes, and a location service, which serve to operate on and locate chunks, respectively.
-The client interface is also provided by \pkg{chunknet}, allowing interaction with chunks as the major user-facing class in this package.
-Chunks can be interacted with individually, or collected as part of arbitrary-dimension arrays, over which distributed \pkg{apply()}'s and the like are defined.
-The main users of this package are intended to be power-users of distributed statistical algorithms who seek to maximise performance.
-
-The package that meets the demanding statistician referenced in Section~\ref{sec:intro} is given by the \pkg{largescaler} package, which offers the distributed object as an abstracted class where chunk distribution is handled implicitly by the package, freeing the statistician to focus on model creation. Further features offered by the package include distributed environment setup, an automatic distributed function converter, distributed functional programming tools such as a reduce operator, distributed i/o, checkpointing, shuffling of datasets with implicit load-balancing, and a \pkg{dplyr} interface to distributed objects.
-
-\section{User Interface}
-
 The \pkg{largescaler} interface is the principal new contribution by this project, delivering a novel means of interacting with distributed data through meaningful primitives defined at every level of abstraction.
 A key offering of the layered approach is the ease by which a user of the package can traverse the levels as needed, with irrelevent information remaining hidden until required.
 The levels of abstraction correspond to users of the package, given as the following:
@@ -130,38 +166,80 @@ The levels of abstraction correspond to users of the package, given as the follo
     \item[Architect] A user intending to directly modify the network topology of the distributed system, mainly in order to attain major efficiency gains.
 \end{description}
 
-Each of the users are served by the aforementioned packages making up the framework.
-The main public interface to each package is described in greater detail in the following subsections. 
+Each of the users are served by the aforementioned packages making up the framework, in turn serving a logical layer of abstraction.
+This mapping is given in Table \ref{tab:layer}.
 
-\subsection{\pkg{largescalemodelr}}
+\begin{table}[h!]
+\centering
+\caption{A mapping of logical layers, users and the respective packages provided by the \pkg{largescaler} framework to enable the use.}
+\label{tab:layer}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Layer & User & Package \\ \midrule
+Model Usage & Analyst & \pkg{largescalemodelr} \\
+Model Description & Researcher & \pkg{largescaler} \\
+Cluster Interaction & Developer & \pkg{chunknet} \\
+Communication & Architect & \pkg{orcv} \\ \bottomrule
+\end{tabular}
+\end{table}
 
-The interface for the analyst, the \pkg{largescalemodelr} public interface consists solely of statistical models.
-Beyond the analyst, the source code for the models serve as examples of system usage, and are deliberately styled in such a fashion as to demonstrate the different techniques made possible by the lower layers of the \pkg{largescaler} framework.
+Owing to considerations of space, this description of the user interface will focus solely on the key offerings of the \pkg{largescaler} user interface, with descriptions of other components and packages having a fuller treatment in \citet{cairns2023}.
+Use of the API is given by way of example below.
 
-Three models are exposed:
-\begin{description}
-    \item[\texttt{dlm}] Distributed Linear Model
-    \item[\texttt{dglm}] Distributed Generalised Linear Model
-    \item[\texttt{dlasso}] Distributed LASSO
-\end{description}
+Consider first a simple operation of summation.
+Consider some vector $x$ that is broken up into $j$ chunks, yielding $j$ subvectors of length $i$.
+Due to associativity the sum of the whole is the sum of the sum of the parts, as shown in Equation \ref{eqn:sum}.
 
-Each accept distributed objects as arguments for the data sets, with formula interfaces provided for the linear models.
+\begin{equation}\label{eqn:sum}
+    \sum_i x_i= \sum_{j,i}x_{ij} = \sum_j\sum_i x_{ij}
+\end{equation}
 
-\todo{more in this section?}
+In an effort to maintain as close proximity as possible between the mathematical description and the provided interface, this may be written in \pkg{largescaler} in the form given by Listing \ref{lst:sum}
 
-\subsection{\pkg{largescaler}}
+\begin{lstlisting}[caption={Distributed summation with largescaler},label={lst:sum}]
+d(sum)(x) |>
+emerge() |>
+sum()
+\end{lstlisting}
 
-The framework namesake, \pkg{largescaler} serves to provide a toolbox for the definition of distributed statistical models.
-\pkg{largescaler} exposes a range of conceptually related entities
+Here, the \lstinline{d()} applicator function transforms the base \lstinline{sum()} function to work over distributed objects, in this example given by \lstinline{x}.
+\lstinline{sum()} is therefore sent to each chunk, yielding a new distributed object as the output.
+This output distributed object can be brought back to the requesting client and combined using the provided \lstinline{emerge()} function, yielding a regular \proglang{R} numeric vector of sums.
+This vector of sums may then be summed as normal, providing the final result.
+The given example is actually a very simple application of map-reduce, and could effectively serve as the \lstinline{sum()} method for distributed objects
 
-\todo{Distributed Object and methods - [, table, etc.}
-\todo{Distributed Object Reference}
-\todo{ dplyr}
-\todo{ IO}
-\todo{ HOF (do.dcall, dreduce \ref{fig:dreduce}, difference w/map-reduce, map-reduce)}
-\todo{ checkpoint}
-\todo{ combine}
-\todo{ cluster initialisation}
+Consider something slightly more complex: the arithmetic mean.
+Again, using a chunked mathematical description as given in Equation \ref{eqn:mean}, a related means of specification through \pkg{largescaler} is possible, given in Listing \ref{lst:mean}.
+
+\begin{equation}\label{eqn:mean}
+    \overline{x} = \frac{\sum_{i}x_{i}}{n} = \frac{\sum_{j,i}x_{ij}}{\sum_j n_j}
+\end{equation}
+
+\begin{lstlisting}[caption={Distributed arithmetic mean with largescaler},label={lst:mean}]
+sum(x) / { 
+	d(length)(x) |> 
+	sum()
+}
+\end{lstlisting}
+
+Here we build on the distributed sum introduced above, but the total length of The distributed object is relevent as the denominator.
+Assuming a \lstinline{sum()} method for distributed objects as described, and math methods defined in a similar fashion, the denominator is defined using the same \lstinline{d()} function that sends a \lstinline{length} computation to all of the chunks.
+
+Finally, consider the cumulative sum.
+It is important in this case to think of chunks as being in series, which is determined by the structure of the distributed object reference.
+The main difference between a non-distributed and a distributed version of cumulative sum is that for each chunk in the series, computation requires the cumulative sum of the previous chunk as a starting value.
+Using a chunked mathematical description, cumulative sum may be described by Equation \ref{eqn:cumsum}.
+
+\begin{equation}
+\begin{gathered}\label{eqn:cumsum}
+    S_i = S_{i-1}+x_i, \quad S_0 = 0\\
+    \iff S_{i,j} = S_{i-1,j} + x_{i,j}, \quad S_{0,j} = S_{n_i,j-1},\\
+    \qquad S_{0,0} = 0
+\end{gathered}
+\end{equation}
+
+This can be expressed in a functional manner using the \textit{reduce} operator, also known as a \textit{fold}, and the \pkg{largescaler} framework provides a distributed form of such a function, where the results of one chunk are sent as the initial value to the reduce function as applied to the next chunk and so on in series.
+An example of a reduce operation is given in Figure \ref{fig:dreduce}.
 
 \begin{figure}[ht]
 \begin{center}
@@ -171,25 +249,14 @@ The framework namesake, \pkg{largescaler} serves to provide a toolbox for the de
 \end{center}
 \end{figure}
 
-\subsection{\pkg{chunknet}}
+This is put to use for cumulative sum by \pkg{largescaler} as in Listing \ref{lst:cumsum}.
 
-\subsection{\pkg{orcv}}
+\begin{lstlisting}[caption={Distributed cumulative sum with largescaler},label={lst:cumsum}]
+dReduce(cumsum, x) |>
+emerge() 
+\end{lstlisting}
 
-\pkg{orcv} is the infrastructure layer that handles the network communications and base node data structures, as an asynchronous communicating event receiver.
-This lowest layer is a self-contained package of mostly \proglang{C} descriptions of networking communication and thread-safe internal event queues.
-Communications are the core of this package and the main entities given are the listener and receivers.
-The listener is simply a standard \lstinline{accept()}er that upon acceptance of a connection passes on the file descriptor to a thread pool of receivers by way of the thread-safe queue.
-The receiver that picks up the connection in turn reads from it, passing on whatever message is received to a shared event queue, along with a file descriptor of the connection socket, in order to allow for direct responses to messages.
-
-The two core classes exposed by \pkg{orcv} are the \textsc{Message} and the \textsc{Location} classes, which both seek to abstract some of the more fundamental networking details away.
-The \textsc{Message} class captures the notion of the payload, which is sent to some other node given by a \textsc{Location}, using the \lstinline{send()} method.
-The payload can be any standard \proglang{R} object.
-This is accepted in a separate thread at the receiver location, provided that that the receiver server has been \lstinline{start()}ed, and it is placed on a receiver event queue.
-The event queue consists of a basic thread-safe queue, with efficiency gains from \lstinline{poll()}.
-The event queue can be popped using a \lstinline{receive()}, and in this fashion communication can take place.
-
-So orcv provides initial network communication capabilities, as well as event queues that can be monitored, with events themselves able to be replied to directly by way of their included file descriptor.
-Much of the package structure is related to existing work by \citet{osrv}, with much of the networking architecture taking direct inspiration from \citet{stevens1997network}
+A distributed object is returned that by default just holds the final accumulation, consisting of one single chunk.
 
 \section{Discussion/Conclusions}
 
