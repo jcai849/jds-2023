@@ -31,7 +31,7 @@
 \usepackage{booktabs}
 \usepackage{listings}
 
-\title{A Platform for Large Scale Statistical Modelling in \proglang{R}}
+\title{A Platform for Large Scale Statistical Modelling in R}
 
 \author[1]{Jason Cairns\thanks{corresponding email:\href{mailto:jason.cairns@auckland.ac.nz}{jason.cairns@auckland.ac.nz}}}
 \author[1]{Simon Urbanek}
@@ -65,21 +65,21 @@ This is precisely the contribution that \pkg{largescaler} seeks to offer as a pl
 Existing systems that do come close to meeting the demand provide direction regarding how to gain insight from larger-than-memory datasets.
 Most importantly, the standard solution for handling big data is to operate over a distributed system~\citep{boja2012distributed}.
 Several systems have seen widespread use within the context of data and machine learning pipelines, such as \pkg{Spark}~\citep{zaharia2016apache} and \pkg{Hadoop Map-Reduce}~\citep{shvachko2010hadoop}.
-For the statistician mostly familiar with \proglang{R}, these systems provide API's to \proglang{R} where distributed data may be manipulated and pre-made models fitted.
-However, these API's are often found lacking when attempted to be used for the creation of complex statistical models that don't come pre-packaged, due to this not being their primary use-case, and \proglang{R} not being their target language.
+For the statistician mostly familiar with \proglang{R}, these systems provide APIs to \proglang{R} where distributed data may be manipulated and pre-made models fitted.
+However, these APIs are often found lacking when attempted to be used for the creation of complex statistical models that don't come pre-packaged, due to this not being their primary use-case, and \proglang{R} not being their target language.
 
-For instance, \pkg{sparklyr} is an interface to Spark from within R~\citep{luraschi20}.
+For instance, \pkg{sparklyr} is an interface to Spark from within \proglang{R}~\citep{luraschi20}.
 The user connects to spark and accumulates instructions for the manipulation of a \pkg{Spark} DataFrame object using \pkg{dplyr} commands, then executing the request on the \pkg{Spark} cluster.
 It works fluidly when intentions meet the \pkg{Spark} paradigm, but due to it being only an interface to an external system, it is commonly required to program directly to \pkg{Spark} specifications, using \proglang{Scala}, when more complex and custom analyses are required.
 
 The most notable general interface in \proglang{R} that has capabilities for large data is the the \pkg{foreach} package~\citep{microsoft20}.
 The backends are provided by other packages, typically named with some form of ``Do\emph{X}'', and can be drivers to external or \proglang{R}-specific systems.
-Parallelisation is enabled by some backends, with \pkg{doParallel} allowing parallel computations~\citep{corporation19}, \pkg{doSNOW} enabling cluster access through the \pkg{SNOW} package~\citep{dosnow19}, and \pkg{doMPI} allowing for direct MPI access~\citep{weston17}.
+Parallelisation is enabled by some backends, with \pkg{doParallel} allowing parallel computations~\citep{corporation19}, \pkg{doSNOW} enabling cluster access through the \pkg{SNOW} package~\citep{dosnow19}, and \pkg{doMPI} allowing for direct access to the Message Passing Interface (MPI) library for parallel computing~\citep{weston17}.
 \pkg{foreach} remains an exceptional and general interface, but can only be as performant as the backend driver packages.
 The necessity of persisting large data objects and allowing for complex manipulation of them is not met by any of the reviewed package backends.
 
 The most complete self-contained interface that was developed specifically for statistical modelling in \proglang{R} is given by the \pkg{pbdR} collection.
-This collection allows for for distributed computing with \proglang{R}~\citep{pbdBASEpackage}, with the name being the abbreviation of Programming with Big Data in R.
+This collection allows for distributed computing with \proglang{R}~\citep{pbdBASEpackage}, with the name being the abbreviation of Programming with Big Data in \proglang{R}.
 The packages include high-performance communication and computation capabilities, including \pkg{RPC}, \pkg{ZeroMQ}, and \pkg{MPI} interfaces.
 The collection is extensive, offering several packages for each of the main categories of application functionality, communication, computation, development, I/O, and profiling.
 While incredibly performant and great care has been taken to provide an interface as close to native \proglang{R} as possible, the provided packages still require an MPI form of shared program amongst all cluster nodes, which presents an unfamiliar form of program specification to most \proglang{R} users.
@@ -87,19 +87,25 @@ In addition, more complex analyses requiring lower-level data manipulation end u
 Regardless, the direction provided of distributing large data across compute nodes, as a means of statistical interaction, is a concept that has been proven well by this package collection.
 
 In a similar vein is the \pkg{bigmemory} collection.
-Core to this package is the creation of ``massive matrices'' through a ``big.matrix'' S4 class with a similar interface to `matrix'\citep{kane13:bigmemory}.
+Core to this package is the creation of ``massive matrices'' through a ``big.matrix'' S4 class with a similar interface to `matrix' \citep{kane13:bigmemory}.
 These matrices may take up gigabytes of memory, typically larger than RAM, and have simple operations defined that speed up their usage.
 A variety of extension packages are also available that provide more functionality for big.matrices.
-The massive capacity of big.matrices is given through their default memory allocation to shared memory, rather than working memory as in most R objects.
+The massive capacity of big.matrices is given through their default memory allocation to shared memory, rather than working memory as in most \proglang{R} objects.
 Importantly, \pkg{bigmemory} is single-node only, so can't benefit from the scaling capabilities that a distributed system would provide, nor does it face the same architectural challenges.
 Of note within the \pkg{bigmemory} collection is \pkg{biglasso}, which extends \pkg{bigmemory} matrices to allow for lasso, ridge and elastic-net model fitting.
-It can take advantage of multicore machines, with the ability to be run in parallel. The package \pkg{biglasso} described in detail in \citet{zeng2017biglasso}.
+It can take advantage of multicore machines, with the ability to be run in parallel. The package \pkg{biglasso} is described in detail in \citet{zeng2017biglasso}.
 Comparability is again limited between \pkg{biglasso} and \pkg{largescaler}, as \pkg{biglasso} is bound to a single machine.
 In terms of interface, however, the most notable difference is the support by \pkg{largescaler} for arbitrary data types with split and combine methods defined for chunking, while \pkg{bigmemory} packages depend upon the matrix-based data structure.
 
-Within the motivating context provided, the \pkg{largescaler} project has sought to provide an API for working with larger-than-memory data in \proglang{R}, allowing the developer to manipulate distributed data and create arbitrarily complex iterative models with which to fit to the data, over a self-contained user-specified computing cluster. A summary of features is given in Section~\ref{sec:discussion}, and further details on \pkg{largescaler} are provided in~\citet{cairns2024}.
+Within the motivating context provided, the \pkg{largescaler} project has sought to provide an API for working with larger-than-memory data in \proglang{R}, allowing the developer to manipulate distributed data and create arbitrarily complex iterative models with which to fit to the data, over a self-contained user-specified computing cluster. 
 
-\section{Construction of a Large-Data Statistical System API for R}
+The following sections offer a structured exploration of \pkg{largescaler}.
+The methodological details of the \pkg{largescaler} API construction are given in Section~\ref{sec:construct}.
+Section~\ref{sec:ui} describes the API itself.
+This is followed in Section~\ref{sec:lsm} with example usage of the API to develop a distributed model.
+Finally, a discussion and summary of features is given in Section~\ref{sec:discussion}.
+
+\section{Construction of a Large-Data Statistical System API for R}\label{sec:construct}
 
 The construction of such \pkg{largescaler} has roots in a theoretical reconsideration of precisely what determines the necessary components of a system capable of complex statistical modelling with larger-than-memory data in a distributed fashion.
 The structure of such considerations have been defined principally by the response to linguistic challenges facing such an API.
@@ -177,12 +183,12 @@ The levels of abstraction correspond to users of the packages, given as the foll
     \item[Architect] A user intending to directly modify the network topology of the distributed system, mainly in order to attain major efficiency gains.
 \end{description}
 
-Each of the users are served by the aforementioned packages making up the framework, in turn serving a logical layer of abstraction.
+Each of the users are served by the packages composing the \pkg{largescaler} framework, in turn serving a logical layer of abstraction.
 This mapping is given in Table \ref{tab:layer}.
 
 \begin{table}[h!]
 \centering
-\caption{A mapping of logical layers, users and the respective packages provided by the \pkg{largescaler} framework to enable the use.}
+\caption{A mapping of logical layers, users and the respective packages provided by the \pkg{largescaler} framework.}
 \label{tab:layer}
 \begin{tabular}{@{}lll@{}}
 \toprule
@@ -198,11 +204,12 @@ Owing to considerations of space, this description of the user interface will fo
 Use of the API is given by way of example below.
 
 Consider first a simple operation of summation.
-Consider some vector $x$ that is broken up into $j$ chunks, yielding $j$ subvectors each indexed by $i$.
-Due to associativity in summation, the sum of the whole is the sum of the sum of the parts, as shown in Equation \ref{eqn:sum}.
+We have as our object of summation some vector $x$ that is broken up into $i$ non-overlapping chunks, where each chunk $x_i$ is itself a vector consisting of a subset of the elements of $x$.
+Each chunk may itself be indexed over its elements by $j$, with the $j$th element of chunk $x_i$ denoted as $x_{ij}$.
+Summation can be defined for a chunked vector $x_i$ by Equation~\ref{eqn:sum}, using associativity to render the sum of the whole as the sum of the sum of the parts.
 
 \begin{equation}\label{eqn:sum}
-    \sum_i x_i= \sum_{j,i}x_{ij} = \sum_j\sum_i x_{ij}
+    \sum x = \sum_i x_i= \sum_i\sum_j x_{ij}
 \end{equation}
 
 In an effort to maintain as close proximity as possible between the mathematical description and the provided interface, this may be written in \pkg{largescaler} as in the following \proglang{R} code:
@@ -216,17 +223,17 @@ This vector of sums may then be summed as normal, providing the final result.
 The given example is actually a very simple application of map-reduce, and could effectively serve as the \code{sum()} method for distributed objects
 
 Consider something slightly more complex: the arithmetic mean.
-Again, a chunked mathematical description is given in Equation \ref{eqn:mean}.
+Again, a chunked mathematical description is given in Equation \ref{eqn:mean}, where $\textrm{dim}(x)$ is the dimension of the vector argument $x$, and $\textrm{dim}(x_i)$ then being the dimension of the specific chunk $x_i$
 
 \begin{equation}\label{eqn:mean}
-    \overline{x} = \frac{\sum_{i}x_{i}}{n} = \frac{\sum_{j,i}x_{ij}}{\sum_j n_j}
+    \overline{x} = \frac{\sum_{i}x_{i}}{\textrm{dim}(x)} = \frac{\sum_{ij}x_{ij}}{\sum_i \textrm{dim}(x_i)}
 \end{equation}
 
 A related means of specification through \pkg{largescaler} is possible, given in the following code:
 
-\code{sum(x) / { d(length)(x) |> sum() } }
+\code{sum(x) / sum(d(length)(x))}
 
-Here we build on the distributed sum introduced above, but the total length of The distributed object is relevent as the denominator.
+Here we build on the distributed sum introduced above, but the total length of the distributed object is relevent as the denominator.
 Assuming a \code{sum()} method for distributed objects as described, and the math group generic defined in a similar fashion, the denominator is defined using the same \code{d()} function that sends a \code{length} computation to all of the chunks.
 
 Finally, consider the cumulative sum.
@@ -260,12 +267,12 @@ This is put to use for cumulative sum by \pkg{largescaler} by the following code
 
 A distributed object is returned that by default just holds the final accumulation, consisting of one single chunk.
 
-\section{A Distributed Model in largescaler}
+\section{A Distributed Model in largescaler}\label{sec:lsm}
 
 We now move to the central problem that prompted this work; defining a novel distributed statistical algorithm.
 Rather than detour with a truly novel algorithm, it is prefereable to engage with something that is familiar, but holds a fairly generic form that novel analyses often share.
 Let's consider distributed LASSO regression, using the Alternating Direction Method of Multipliers (ADMM), as described by \citet{mateos2010}.
-We begin by assessing the mathematical form in Subsection \ref{sec:mathlasso}, followed by the ``standard R'' means of writing a chunked algorithm in contraposition with the \pkg{largescaler} manner in Subsection \ref{sec:rlasso}.
+We begin by assessing the mathematical form in Subsection \ref{sec:mathlasso}, followed by the ``standard \proglang{R}'' means of writing a chunked algorithm in contraposition with the \pkg{largescaler} manner in Subsection~\ref{sec:rlasso}.
 
 \subsection{Distributed LASSO Mathematical Definition}\label{sec:mathlasso}
 
@@ -327,12 +334,12 @@ a + \kappa & a < -\kappa
 
 \subsection{Distributed LASSO R Description}\label{sec:rlasso}
 
-This subsection gives both base R syntax for working with a local chunked dataset, as well as the minimal changes that are required when using \pkg{largescaler} to transform the expressions to handle distributed data.
+This subsection gives both base \proglang{R} syntax for working with a local chunked dataset, as well as the minimal changes that are required when using \pkg{largescaler} to transform the expressions to handle distributed data.
 The core substance of this subsection is to demonstrate the ease with which \proglang{R} is able to meet a mathematical definition, and the successive ease by which \pkg{largescaler} is able to turn that into a truly distributed algorithm.
 As in Subsection \ref{sec:mathlasso}, the working example is given of distributed LASSO.
 Consider first some chunked data, given as a diff below.
 In the diff, semantic differences are demarcated through underlining, with shared code given centrally, with no dividing line.
-On the left of the diff we have how the LASSO as described might be encoded in the absence of the API, assuming that the data fit into memory, and on the right, we make use of large scale R with no such constraining assumption.
+On the left of the diff we have how the LASSO as described might be encoded in the absence of the API, assuming that the data fit into memory, and on the right, we make use of \pkg{largescaler} with no such constraining assumption.
 
 In the \pkg{largescaler} code, distributed data may come from multiple files and multiple hosts holding the chunks, and this is easily provided for.
 The distribution comes with the necessity to carefully differentiate between the reference of the distributed object, and the distributed object itself, hence the use of the \code{Ref()} function as provided by \pkg{largescaleobjects}.
@@ -526,7 +533,17 @@ External systems which serve to monitor performance or take up the role of garba
 Robustness could be gained through self-healing datasets, a potential that has a precedent in a current prototype, which allows for resiliance to node failure in a more efficient manner than that of the current Resilient Distributed Datasets~\citep{zaharia2012resilient}.
 Further resiliance can be gained within the system through operating the location service as a distributed hash table, leaving no central point of failure in a fully peer-to-peer system.
 
+\section*{Supplementary Material}
+The supplementary material includes a gzipped directory of the source packages composing \pkg{largescaler}.
+The packages can also be accessed on GitHub through the following hyperlinks:
+\begin{itemize}
+\item \href{https://github.com/jcai849/orcv}{orcv}
+\item \href{https://github.com/jcai849/chunknet}{chunknet}
+\item \href{https://github.com/jcai849/largescaleobjects}{largescaleobjects}
+\item \href{https://github.com/jcai849/largescalemodels}{largescalemodels}
+\end{itemize}
+
 \bibliographystyle{jds}
-\bibliography{largescaler-jason-cairns}
+\bibliography{paper}
 
 \end{document}
