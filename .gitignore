@@ -9,3 +9,4 @@
 *.synctex.gz
 *.tar.gz
 *.swp
+.direnv
